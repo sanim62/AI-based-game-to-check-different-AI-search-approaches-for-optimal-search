@@ -1,0 +1,20 @@
+{
+  "name": "dungeon-of-minds",
+  "version": "1.0.0",
+  "description": "Dungeon of Minds: Warrior vs Mage AI — A turn-based 10x10 dungeon laboratory with Minimax, Expectimax, and FSM Goblins.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test_algorithms.js"
+  },
+  "keywords": [
+    "ai",
+    "minimax",
+    "expectimax",
+    "fsm",
+    "astar",
+    "dungeon-game"
+  ],
+  "author": "",
+  "license": "MIT"
+}

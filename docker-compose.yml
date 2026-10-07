@@ -1,0 +1,7 @@
+services:
+  dungeon-of-minds:
+    build: .
+    container_name: dungeon_of_minds
+    ports:
+      - "8080:80"
+    restart: unless-stopped
