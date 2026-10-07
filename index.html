@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dungeon of Minds: Warrior vs Mage AI</title>
+  <meta name="description" content="Dungeon of Minds: A turn-based dungeon game on a 10x10 grid with walls, traps, and potions. Warrior (Minimax + Alpha-Beta) vs Mage (Expectimax), featuring roaming FSM goblins.">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ═══ HEADER ═══ -->
+  <header>
+    <h1>⚔ DUNGEON OF MINDS: WARRIOR VS MAGE AI</h1>
+    <div class="subtitle">Turn-Based 10x10 Dungeon · Warrior (Minimax) vs Mage (Expectimax) · Roaming FSM Goblins</div>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs" aria-label="Main Navigation">
+      <button class="nav-tab active" data-tab="arena" id="tabBtnArena">⚔ Duel Arena</button>
+      <button class="nav-tab" data-tab="benchmark" id="tabBtnBenchmark">🧪 Benchmark & Ability Lab</button>
+      <button class="nav-tab" data-tab="studio" id="tabBtnStudio">💻 Custom Algorithm Studio</button>
+      <button class="nav-tab" data-tab="compendium" id="tabBtnCompendium">📖 Algorithm Compendium</button>
+    </nav>
+  </header>
+
+  <!-- ═════════════════════════════════════════════════════════
+       TAB 1: DUEL ARENA (Visual Real-Time Play & Spectate)
+       ═════════════════════════════════════════════════════════ -->
+  <main class="tab-view active" id="view-arena">
+    <!-- Top Sub-Bar: Mode & Series Selection -->
+    <div class="arena-topbar">
+      <div class="mode-tabs">
+        <button class="mode-tab active" data-mode="ai" id="modeAiBtn">🤖 AI vs AI Duel</button>
+        <button class="mode-tab" data-mode="human" id="modeHumanBtn">🧑 Human vs AI</button>
+      </div>
+
+      <div class="series-wrap">
+        <span>Series Format:</span>
+        <select id="seriesSel" aria-label="Series Format">
+          <option value="1">Best-of-1 (Bo1)</option>
+          <option value="3" selected>Best-of-3 (Bo3)</option>
+          <option value="5">Best-of-5 (Bo5)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Heroes HUD Cards -->
+    <div class="heroes-hud">
+      <!-- Hero 1 (Warrior) -->
+      <div class="hero-card h1" id="card1">
+        <div class="hero-header">
+          <div class="hero-name h1" id="h1Name">⚔ Warrior (Minimax)</div>
+          <span class="algo-badge" id="h1AlgoBadge">Warrior · α-β</span>
+        </div>
+        <div class="hero-stats">
+          <span>HP <span class="stat-val" id="h1Hp">100</span>/<span id="h1MaxHp">100</span></span>
+          <span>MP <span class="stat-val" id="h1Mp">10</span>/10</span>
+          <span>ATK <span class="stat-val" id="h1Atk">20</span></span>
+          <span>ULT <span class="stat-val" id="h1Ult">0</span>%</span>
+        </div>
+        <div class="bar-wrap"><div class="hp-bar h1" id="hpBar1" style="width:100%"></div></div>
+        <div class="mp-bar"><div class="mp-fill" id="mpBar1" style="width:100%"></div></div>
+        <div class="ult-bar-wrap"><div class="ult-fill" id="ultBar1" style="width:0%"></div></div>
+        <div class="status-tags" id="tags1"></div>
+      </div>
+
+      <!-- Match Mid Round Status -->
+      <div class="mid-card">
+        <div class="round-num" id="roundNum">R1</div>
+        <div class="wins-disp" id="winsDisp">0 – 0</div>
+        <div class="series-disp" id="seriesDisp">Bo3</div>
+        <div class="goblins-disp" id="goblinsDisp">👺 3 Goblins</div>
+      </div>
+
+      <!-- Hero 2 (Mage) -->
+      <div class="hero-card h2" id="card2">
+        <div class="hero-header">
+          <div class="hero-name h2" id="h2Name">🔮 Mage (Expectimax)</div>
+          <span class="algo-badge" id="h2AlgoBadge">Mage · Expectimax</span>
+        </div>
+        <div class="hero-stats">
+          <span>HP <span class="stat-val" id="h2Hp">70</span>/<span id="h2MaxHp">70</span></span>
+          <span>MP <span class="stat-val" id="h2Mp">10</span>/10</span>
+          <span>ATK <span class="stat-val" id="h2Atk">10</span></span>
+          <span>ULT <span class="stat-val" id="h2Ult">0</span>%</span>
+        </div>
+        <div class="bar-wrap"><div class="hp-bar h2" id="hpBar2" style="width:100%"></div></div>
+        <div class="mp-bar"><div class="mp-fill" id="mpBar2" style="width:100%"></div></div>
+        <div class="ult-bar-wrap"><div class="ult-fill" id="ultBar2" style="width:0%"></div></div>
+        <div class="status-tags" id="tags2"></div>
+      </div>
+    </div>
+
+    <!-- Arena Main: Canvas + Right Panel -->
+    <div class="arena-main">
+      <div class="dungeon-container">
+        <canvas id="canvas" width="442" height="374"></canvas>
+        <canvas id="fogCanvas" width="442" height="374"></canvas>
+        <canvas id="overlayCanvas" width="442" height="374"></canvas>
+        <div class="arena-declaration" id="arenaDeclaration" aria-live="assertive">
+          <div class="dec-icon" id="decIcon">🏆</div>
+          <div class="dec-body">
+            <div class="dec-title" id="decTitle">WARRIOR WINS ROUND 1</div>
+            <div class="dec-subtitle" id="decSubtitle">⚔ by defeating opponent in combat</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-panel">
+        <div class="phase-badge explore" id="phaseBadge">🗺 DUNGEON EXPLORATION</div>
+        <div class="log-box" id="logBox" aria-live="polite"></div>
+
+        <!-- Minimax & Decision Matrix Visualizer -->
+        <div class="mm-panel">
+          <div class="mm-title" id="mmTitle">ALGORITHM DECISION MATRIX</div>
+          <div id="mmRows">
+            <div class="empty-hint">Waiting for combat decisions...</div>
+          </div>
+        </div>
+
+        <!-- Human Action Controls -->
+        <div class="action-bar" id="actionBar" style="display:none;">
+          <div class="action-title">
+            <span>YOUR TURN — CHOOSE SKILL</span>
+            <span id="hintLbl" style="color:var(--gold-light);">AI Recommends: SLASH</span>
+          </div>
+          <div class="action-btns" id="actionBtnsContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arena Live Algorithm Selectors -->
+    <div class="algo-pickers">
+      <div class="picker-col h1">
+        <div class="picker-title h1">Hero 1 (Warrior) Assigned AI</div>
+        <div class="picker-row">
+          <label for="h1PathSel">Pathfinding:</label>
+          <select id="h1PathSel"></select>
+        </div>
+        <div class="picker-row">
+          <label for="h1CombatSel">Combat AI:</label>
+          <select id="h1CombatSel"></select>
+        </div>
+      </div>
+
+      <div class="picker-col h2">
+        <div class="picker-title h2">Hero 2 (Mage) Assigned AI</div>
+        <div class="picker-row">
+          <label for="h2PathSel">Pathfinding:</label>
+          <select id="h2PathSel"></select>
+        </div>
+        <div class="picker-row">
+          <label for="h2CombatSel">Combat AI:</label>
+          <select id="h2CombatSel"></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arena Controls Bar -->
+    <div class="controls-bar">
+      <button class="btn primary" id="startBtn">▶ Start Duel</button>
+      <button class="btn" id="pauseBtn" disabled>⏸ Pause</button>
+      <button class="btn" id="stepBtn" title="Step one turn for debugging">⏭ Step</button>
+      <button class="btn" id="resetBtn">↺ Reset</button>
+      <button class="btn icon-btn" id="muteBtn" title="Toggle Sound">🔊</button>
+
+      <div class="speed-control">
+        <label for="speedSlider">Speed:</label>
+        <input type="range" id="speedSlider" min="1" max="5" value="3">
+        <span id="speedLbl">Normal</span>
+      </div>
+
+      <label class="toggle-wrap" title="Show algorithm visited search nodes on map">
+        <input type="checkbox" id="footprintToggle" checked>
+        <span>Search Footprint Heatmap</span>
+      </label>
+    </div>
+  </main>
+
+  <!-- ═════════════════════════════════════════════════════════
+       TAB 2: ALGORITHM BENCHMARK & ABILITY TESTING LAB
+       ═════════════════════════════════════════════════════════ -->
+  <section class="tab-view" id="view-benchmark">
+    <div class="benchmark-container">
+      <div class="bm-setup-card">
+        <h2>🧪 ALGORITHM ABILITY BENCHMARK LAB</h2>
+        <p class="bm-setup-desc">
+          Rigorously test and compare the ability of any pathfinding and combat algorithms under controlled conditions.
+          Runs headless, high-speed automated simulations across procedural dungeons to evaluate win-rates, DPS,
+          trap collision avoidance, search overhead, and compute latency.
+        </p>
+
+        <div class="bm-grid">
+          <div class="bm-hero-config h1">
+            <div class="bm-hero-title h1">Contender 1 Configuration</div>
+            <div class="form-group">
+              <label for="bmH1Combat">Combat Decision Algorithm:</label>
+              <select id="bmH1Combat"></select>
+            </div>
+            <div class="form-group">
+              <label for="bmH1Path">Pathfinding Algorithm:</label>
+              <select id="bmH1Path"></select>
+            </div>
+          </div>
+
+          <div class="bm-hero-config h2">
+            <div class="bm-hero-title h2">Contender 2 Configuration</div>
+            <div class="form-group">
+              <label for="bmH2Combat">Combat Decision Algorithm:</label>
+              <select id="bmH2Combat"></select>
+            </div>
+            <div class="form-group">
+              <label for="bmH2Path">Pathfinding Algorithm:</label>
+              <select id="bmH2Path"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="bm-actions-bar">
+          <div class="form-group" style="flex-direction:row; align-items:center; gap:8px;">
+            <label for="bmRounds">Simulation Rounds:</label>
+            <select id="bmRounds">
+              <option value="10">10 Matches (Quick Scan)</option>
+              <option value="25">25 Matches (Standard)</option>
+              <option value="50" selected>50 Matches (High Precision)</option>
+              <option value="100">100 Matches (Tournament Grade)</option>
+            </select>
+          </div>
+          <button class="btn primary" id="bmRunBtn">🚀 Run Ability Benchmark</button>
+          <button class="btn" id="bmCancelBtn" disabled>⏹ Stop</button>
+        </div>
+
+        <!-- Live Progress -->
+        <div class="bm-progress-wrap" id="bmProgressWrap">
+          <div class="bm-progress-bar-bg">
+            <div class="bm-progress-bar-fill" id="bmProgressBar"></div>
+          </div>
+          <div class="bm-progress-text" id="bmProgressText">Preparing automated batch simulations...</div>
+        </div>
+      </div>
+
+      <!-- Results Container -->
+      <div id="bmResultsContainer">
+        <!-- Filled dynamically when benchmark finishes -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════════════════════════════════
+       TAB 3: CUSTOM ALGORITHM STUDIO (CODE EDITOR & SANDBOX)
+       ═════════════════════════════════════════════════════════ -->
+  <section class="tab-view" id="view-studio">
+    <div class="studio-container">
+      <div class="studio-card">
+        <div class="studio-header">
+          <h2>💻 CUSTOM ALGORITHM STUDIO</h2>
+          <div class="studio-controls">
+            <label for="studioTypeSel" style="font-size:11px; color:#8b7965;">Algorithm Target:</label>
+            <select id="studioTypeSel">
+              <option value="combat" selected>Combat Decision AI</option>
+              <option value="path">Dungeon Pathfinding AI</option>
+            </select>
+
+            <label for="studioPresetSel" style="font-size:11px; color:#8b7965; margin-left:6px;">Presets:</label>
+            <select id="studioPresetSel">
+              <option value="">Load Preset Code...</option>
+              <option value="vampiric">Vampiric Drainer & Burn</option>
+              <option value="stunner">Stun-Lock Combo Specialist</option>
+              <option value="turtle">Iron Turtle & Shield</option>
+              <option value="glass_cannon">Pure Aggro Berserker</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="editor-wrap">
+          <textarea id="studioCodeArea" class="code-editor" spellcheck="false"></textarea>
+        </div>
+
+        <div class="studio-btn-bar">
+          <button class="btn primary" id="studioValidateBtn">⚙ Validate & Dry Run Test</button>
+          <div class="studio-deploy-btns">
+            <button class="btn" id="studioDeployH1Btn">Deploy to Warrior (H1)</button>
+            <button class="btn" id="studioDeployH2Btn">Deploy to Mage (H2)</button>
+          </div>
+        </div>
+
+        <div class="studio-console" id="studioConsole">
+          Code sandbox ready. Write your custom logic above and click "Validate & Dry Run Test" to evaluate!
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════════════════════════════════════
+       TAB 4: ALGORITHM COMPENDIUM & GUIDE
+       ═════════════════════════════════════════════════════════ -->
+  <section class="tab-view" id="view-compendium">
+    <div class="compendium-card">
+      <h2>📖 AI ALGORITHM COMPENDIUM & THEORETICAL GUIDE</h2>
+      <p style="font-size:12px; color:#9ca3af; margin-bottom:16px;">
+        Comprehensive breakdown of the search strategies, decision heuristics, and game-theoretic principles implemented in this lab.
+      </p>
+
+      <div class="algo-doc-section">
+        <h3>⚔ DUNGEON OF MINDS: CHARACTERS, RULES & AI ARCHITECTURE</h3>
+        <div class="algo-grid-doc">
+          <div class="algo-doc-item">
+            <h4>⚔ Warrior (Minimax + Alpha-Beta Pruning)</h4>
+            <p>
+              <strong>Stats:</strong> 100 HP, 20 Base ATK.<br>
+              <strong>Abilities:</strong><br>
+              • <em>Slash</em>: Adjacent melee strike dealing 20 damage with 90% accuracy.<br>
+              • <em>Block</em>: Defensive stance granting 50% damage reduction until next turn.<br>
+              <strong>AI Decision Engine:</strong> Minimax adversarial lookahead with Alpha-Beta pruning (α-β), assuming optimal opponent counters and maximizing worst-case outcomes.
+            </p>
+          </div>
+          <div class="algo-doc-item">
+            <h4>🔮 Mage (Expectimax Search)</h4>
+            <p>
+              <strong>Stats:</strong> 70 HP, 10 Base ATK.<br>
+              <strong>Abilities:</strong><br>
+              • <em>Magic Missile</em>: Ranged projectile (range 3) dealing 10 damage with 100% hit rate.<br>
+              • <em>Fireball</em>: Devastating blast (range 4) dealing 25 damage with 80% accuracy and a 2-turn cooldown.<br>
+              <strong>AI Decision Engine:</strong> Expectimax search evaluating probabilistic chance nodes (accuracy percentages and critical strikes) to maximize expected utility.
+            </p>
+          </div>
+          <div class="algo-doc-item">
+            <h4>👺 Goblins (Finite State Machine - FSM)</h4>
+            <p>
+              <strong>Stats:</strong> 20 HP, 5 ATK. Roam the 10x10 dungeon as environmental hazards and target whichever hero is closer.<br>
+              <strong>FSM States:</strong><br>
+              • <em>Patrol</em>: Circles procedural room waypoints.<br>
+              • <em>Chase</em>: Engages A* pursuit when a hero approaches within 4 tiles.<br>
+              • <em>Attack</em>: Strikes adjacent hero for 5 damage.<br>
+              • <em>Flee</em>: Retreats when HP drops to ≤ 5.
+            </p>
+          </div>
+          <div class="algo-doc-item">
+            <h4>🗺 Dungeon Environment & Turn Rules</h4>
+            <p>
+              <strong>Turn Order:</strong> Warrior → Mage → Goblins → Next Round.<br>
+              <strong>Actions:</strong> Move up to 2 tiles, attack or cast, block (Warrior only), or wait.<br>
+              <strong>Tiles:</strong> Wall (blocks movement & spell line-of-sight), Trap (10 HP damage), Potion (+20 HP restore once).<br>
+              <strong>Win Condition:</strong> Reduce opponent to 0 HP. If neither wins within 40 rounds, the hero with higher remaining HP wins!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="algo-doc-section">
+        <h3>🧭 PATHFINDING ALGORITHMS</h3>
+        <div class="algo-grid-doc">
+          <div class="algo-doc-item">
+            <h4>A* Search (Astar)</h4>
+            <p>
+              Uses evaluation function <code>f(n) = g(n) + h(n)</code> where <code>g(n)</code> is actual distance traveled and <code>h(n)</code> is the Manhattan distance heuristic. Integrated with dynamic hazard costs to intelligently detour around discovered traps while guaranteeing shortest path optimality.
+            </p>
+          </div>
+          <div class="algo-doc-item">
+            <h4>Dijkstra's Algorithm (Uniform Cost)</h4>
+            <p>
+              Explores outwards symmetrically by cost without any heuristic guide. Guarantees the optimal shortest path, but explores significantly more nodes than A*, resulting in higher search footprint.
+            </p>
+          </div>
+          <div class="algo-doc-item">
+            <h4>Greedy Best-First Search</h4>
+            <p>
+              Rushes directly towards the target based strictly on <code>h(n)</code>. While extremely fast in open spaces, it is susceptible to local minima and can take heavily suboptimal detours around walls and hazards.
+            </p>
+          </div>
+          <div class="algo-doc-item">
+            <h4>Breadth-First Search (BFS)</h4>
+            <p>
+              Exhaustively searches in level-order FIFO queue. Finds shortest path in grid step count, but expands all radial branches regardless of goal direction.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="algo-doc-section">
+        <h3>⚔ COMBAT DECISION ALGORITHMS</h3>
+        <div class="algo-grid-doc">
+          <div class="algo-doc-item">
+            <h4>Minimax with Alpha-Beta Pruning</h4>
+            <p>
+              Game-theoretic adversarial search that assumes the opponent will always pick their optimal countermove. Prunes branches where <code>β ≤ α</code>, allowing deep 4-turn lookahead within milliseconds.
+            </p>
+          </div>
+          <div class="algo-doc-item">
+            <h4>Expectimax Search</h4>
+            <p>
+              Models non-deterministic game elements (critical strikes with 12% probability and damage variance) as chance nodes, maximizing expected utility rather than assuming worst-case scenarios.
+            </p>
+          </div>
+          <div class="algo-doc-item">
+            <h4>Monte Carlo Tree Search (MCTS)</h4>
+            <p>
+              Performs rapid random playout rollouts to terminal states. Aggregates win frequencies for candidate actions without needing hand-crafted heuristic weights.
+            </p>
+          </div>
+          <div class="algo-doc-item">
+            <h4>Rule-Based Expert Systems</h4>
+            <p>
+              Heuristic finite-state agents (Berserker Aggro, Control Mage, Balanced Tactician) encoded with domain knowledge to execute high-synergy status rotations (e.g. Stun into Heavy into Rage).
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ MODULAR APPLICATION SCRIPTS ═══ -->
+  <script src="js/constants.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/dungeon.js"></script>
+  <script src="js/hero.js"></script>
+  <script src="js/algorithms/pathfinding.js"></script>
+  <script src="js/algorithms/combat-ai.js"></script>
+  <script src="js/algorithms/custom-sandbox.js"></script>
+  <script src="js/benchmark.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
