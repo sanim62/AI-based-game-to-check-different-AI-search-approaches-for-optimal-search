@@ -49,7 +49,10 @@
       <!-- Hero 1 (Warrior) -->
       <div class="hero-card h1" id="card1">
         <div class="hero-header">
-          <div class="hero-name h1" id="h1Name">⚔ Warrior (Minimax)</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="hero-avatar-thumb warrior-thumb" title="Hero (Warrior)"></div>
+            <div class="hero-name h1" id="h1Name">⚔ Warrior (Minimax)</div>
+          </div>
           <span class="algo-badge" id="h1AlgoBadge">Warrior · α-β</span>
         </div>
         <div class="hero-stats">
@@ -75,7 +78,10 @@
       <!-- Hero 2 (Mage) -->
       <div class="hero-card h2" id="card2">
         <div class="hero-header">
-          <div class="hero-name h2" id="h2Name">🔮 Mage (Expectimax)</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="hero-avatar-thumb mage-thumb" title="Mage Guardian"></div>
+            <div class="hero-name h2" id="h2Name">🔮 Mage (Expectimax)</div>
+          </div>
           <span class="algo-badge" id="h2AlgoBadge">Mage · Expectimax</span>
         </div>
         <div class="hero-stats">
@@ -173,6 +179,11 @@
       <label class="toggle-wrap" title="Show algorithm visited search nodes on map">
         <input type="checkbox" id="footprintToggle" checked>
         <span>Search Footprint Heatmap</span>
+      </label>
+
+      <label class="toggle-wrap" title="Toggle Fog of War visibility">
+        <input type="checkbox" id="fogToggle">
+        <span>Fog of War</span>
       </label>
     </div>
   </main>
